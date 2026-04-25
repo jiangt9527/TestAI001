@@ -25,7 +25,21 @@
 
 ## 进行中的任务
 
-> 无（初始化完成，等待后续任务）
+### 🎯 OpsAgent — 运维超级智能体
+
+**目标**：构建一个能实时感知系统状态、主动诊断故障、协助日常运维、并接入现有监控界面的 AI 智能体集群。
+
+**四个里程碑**：
+- Milestone 1：数据采集层（LogAgent + DBAgent + APIProbeAgent + 事件总线）
+- Milestone 2：大脑层（OrchestratorAgent：事件关联、规则诊断、AI 解读）
+- Milestone 3：执行层（ActionAgent：受控运维操作 + 审计日志）
+- Milestone 4：接口层（REST API + Webhook + Prometheus Metrics，供 Grafana/Zabbix 接入）
+
+**当前进度**：规划完成，待启动 Milestone 1 MVP（LogAgent + APIServer + Docker Compose）
+
+**项目目录**：`ops-agent/`（待创建）
+
+**技术选型**：Python 3.11+、FastAPI、SQLAlchemy、asyncio、Docker Compose
 
 ---
 
