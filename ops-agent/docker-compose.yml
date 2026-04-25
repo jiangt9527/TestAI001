@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  ops-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ops-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"     # REST API + Prometheus metrics
+    volumes:
+      - ops_data:/data                        # 告警持久化 + 进化日志
+      - ./config:/app/config                  # 配置热挂载（rules.yaml 修改后自动生效）
+      - /var/log:/logs:ro                     # 挂载宿主机日志目录（只读）
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - RULES_PATH=/app/config/rules.yaml
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/status/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  ops_data:
+    driver: local

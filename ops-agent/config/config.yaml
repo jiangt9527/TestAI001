@@ -1,0 +1,88 @@
+# OpsAgent 主配置文件
+# 修改后重启服务生效；rules.yaml 中的规则支持热重载（无需重启）
+
+system:
+  name: OpsAgent
+  version: "0.1.0"
+  log_level: INFO
+  data_dir: /data                 # 持久化数据目录（Docker volume 挂载）
+  alert_retention_days: 30        # 告警保留天数
+
+# ── 日志监控 ──────────────────────────────────────────────
+log_agent:
+  enabled: true
+  poll_interval_seconds: 2
+  targets:
+    - path: /logs/app.log
+      name: app
+      encoding: utf-8
+    - path: /logs/nginx/access.log
+      name: nginx_access
+      encoding: utf-8
+    - path: /logs/nginx/error.log
+      name: nginx_error
+      encoding: utf-8
+
+# ── 数据库监控 ────────────────────────────────────────────
+db_agent:
+  enabled: false                  # 初始关闭，配置好连接后再启用
+  poll_interval_seconds: 30
+  targets: []
+  # 示例:
+  # - name: mysql_jobs
+  #   dsn: mysql+aiomysql://user:pass@host:3306/db
+  #   query: "SELECT id, status, error_msg, updated_at FROM job_status WHERE status='failed' AND updated_at > NOW() - INTERVAL 5 MINUTE"
+  #   severity_field: severity      # 可选：从结果列读取严重度
+  #   message_template: "Job {id} failed: {error_msg}"
+
+# ── API 探针 ──────────────────────────────────────────────
+api_probe_agent:
+  enabled: true
+  poll_interval_seconds: 60
+  timeout_seconds: 10
+  targets:
+    - name: local_health
+      url: http://localhost:8080/health
+      method: GET
+      expected_status: 200
+      severity_on_failure: error
+
+# ── 编排智能体 ────────────────────────────────────────────
+orchestrator_agent:
+  correlation_window_seconds: 300  # 5 分钟内相同规则的事件聚合为一条告警
+  dedup_key_fields:
+    - rule_id
+    - target
+
+# ── 自我进化智能体 ────────────────────────────────────────
+self_evolution_agent:
+  enabled: true
+  review_interval_seconds: 3600    # 每小时检查一次规则效果
+  false_positive_threshold: 0.3    # 误报率超过 30% 则降低规则权重
+  min_fires_for_review: 10         # 规则触发次数达到此阈值才参与评估
+
+# ── 外部 LLM Agent 连接配置 ───────────────────────────────
+# 本项目所有 Agent 均不直接调用 LLM。
+# AI 能力（告警诊断、规则进化建议）通过 RESTful 请求发送到此处配置的外部 LLM Agent。
+# LLM Agent 由另一个平台编排生成，与本项目解耦。
+#
+# 当 enabled=false 或 base_url 为空时，各 Agent 自动降级为纯统计/规则逻辑，
+# 不影响系统正常运行。
+#
+# 外部 LLM Agent 需实现以下接口（详见 core/llm_agent_client.py 中的契约文档）：
+#   POST /analyze-alert   ← 告警 AI 诊断
+#   POST /evolve-rules    ← 规则进化建议（含新规则发现）
+llm_agent:
+  enabled: false
+  base_url: ""                     # 示例：http://llm-agent.internal:9000
+  timeout_seconds: 30
+  api_key: ""                      # 可选：鉴权 Key
+  api_key_header: "X-API-Key"      # 可选：鉴权 Header 名称
+  retry_attempts: 2                # 超时/失败后的重试次数
+
+# ── API 服务器 ────────────────────────────────────────────
+api_server:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins:
+    - "*"
