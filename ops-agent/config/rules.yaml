@@ -1,0 +1,129 @@
+# rules.yaml — 检测规则定义
+#
+# 支持热重载：SelfEvolutionAgent 会在此文件基础上自动调整 weight 字段。
+# 字段说明：
+#   id          - 唯一规则 ID
+#   name        - 人类可读名称
+#   source      - 适用的事件来源 (log / db / api_probe / *)
+#   pattern     - 正则表达式（适用于 log/db message 字段）
+#   severity    - 产生告警的严重度
+#   title       - 告警标题模板
+#   suggestions - 建议操作列表
+#   weight      - 规则置信度权重 [0.0, 1.0]，由自进化智能体调整
+#   enabled     - 是否启用
+#   tags        - 标签，用于分类和搜索
+
+rules:
+
+  # ── 通用错误模式 ──────────────────────────────────────
+  - id: log_oom
+    name: 内存不足 (OOM)
+    source: log
+    pattern: "(OutOfMemoryError|OOM|out of memory|Cannot allocate memory)"
+    severity: critical
+    title: "检测到内存溢出 [{target}]"
+    suggestions:
+      - "检查 JVM/容器内存限制配置"
+      - "执行 `free -h` 查看系统内存使用情况"
+      - "考虑重启服务以临时恢复"
+    weight: 0.95
+    enabled: true
+    tags: [memory, jvm, linux]
+
+  - id: log_exception
+    name: 应用异常
+    source: log
+    pattern: "(Exception|Error|FATAL|CRITICAL)(?!.*DEBUG)"
+    severity: error
+    title: "应用异常 [{target}]"
+    suggestions:
+      - "查看完整堆栈跟踪，定位异常根因"
+      - "检查最近的代码部署或配置变更"
+    weight: 0.7
+    enabled: true
+    tags: [application, exception]
+
+  - id: log_connection_refused
+    name: 连接被拒绝
+    source: log
+    pattern: "(Connection refused|ECONNREFUSED|connection reset|Connection timed out)"
+    severity: error
+    title: "网络连接失败 [{target}]"
+    suggestions:
+      - "确认目标服务是否正常运行"
+      - "检查防火墙和网络策略"
+      - "验证连接配置（主机名、端口、凭证）"
+    weight: 0.85
+    enabled: true
+    tags: [network, connectivity]
+
+  - id: log_disk_full
+    name: 磁盘空间不足
+    source: log
+    pattern: "(No space left on device|disk full|disk quota exceeded|ENOSPC)"
+    severity: critical
+    title: "磁盘空间不足 [{target}]"
+    suggestions:
+      - "执行 `df -h` 确认磁盘使用情况"
+      - "清理旧日志文件：`find /var/log -name '*.log' -mtime +7 -delete`"
+      - "检查是否有异常大文件"
+    weight: 0.95
+    enabled: true
+    tags: [disk, storage]
+
+  - id: log_timeout
+    name: 超时
+    source: log
+    pattern: "(timeout|timed out|ETIMEDOUT|deadline exceeded)"
+    severity: warning
+    title: "操作超时 [{target}]"
+    suggestions:
+      - "检查依赖服务的响应时间"
+      - "考虑调整超时阈值配置"
+      - "排查网络延迟问题"
+    weight: 0.65
+    enabled: true
+    tags: [performance, timeout]
+
+  - id: log_auth_failure
+    name: 认证失败
+    source: log
+    pattern: "(authentication failed|invalid credentials|401 Unauthorized|403 Forbidden|login failed)"
+    severity: warning
+    title: "认证/授权失败 [{target}]"
+    suggestions:
+      - "检查服务账户凭证是否过期"
+      - "确认 API Key / Token 配置正确"
+      - "检查是否有暴力破解行为"
+    weight: 0.8
+    enabled: true
+    tags: [security, auth]
+
+  # ── API 探针规则 ──────────────────────────────────────
+  - id: probe_endpoint_down
+    name: 接口不可达
+    source: api_probe
+    pattern: ""  # API 探针通过 status_code 判断，不用 pattern
+    severity: critical
+    title: "服务接口不可达 [{target}]"
+    suggestions:
+      - "检查服务是否正常运行"
+      - "查看服务日志获取崩溃信息"
+      - "检查负载均衡器和代理配置"
+    weight: 0.98
+    enabled: true
+    tags: [availability, endpoint]
+
+  - id: probe_slow_response
+    name: 接口响应慢
+    source: api_probe
+    pattern: ""
+    severity: warning
+    title: "接口响应缓慢 [{target}]"
+    suggestions:
+      - "检查服务器 CPU / 内存使用率"
+      - "查看慢查询日志"
+      - "考虑扩容或添加缓存"
+    weight: 0.75
+    enabled: true
+    tags: [performance, endpoint]

@@ -35,11 +35,15 @@
 - Milestone 3：执行层（ActionAgent：受控运维操作 + 审计日志）
 - Milestone 4：接口层（REST API + Webhook + Prometheus Metrics，供 Grafana/Zabbix 接入）
 
-**当前进度**：规划完成，待启动 Milestone 1 MVP（LogAgent + APIServer + Docker Compose）
+**当前进度**：✅ Milestone 1 完成！代码已实现并通过集成测试。
 
-**项目目录**：`ops-agent/`（待创建）
+**项目目录**：`ops-agent/`
 
 **技术选型**：Python 3.11+、FastAPI、SQLAlchemy、asyncio、Docker Compose
+
+**已实现组件**：LogAgent、DBAgent、APIProbeAgent、OrchestratorAgent、SelfEvolutionAgent、AlertStore、FastAPI REST + /metrics（Prometheus）、Docker Compose
+
+**下一步**：Milestone 2（LLM 诊断增强）或 Milestone 3（ActionAgent 受控执行）
 
 ---
 

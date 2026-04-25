@@ -1,0 +1,10 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pyyaml>=6.0
+aiohttp>=3.9.0
+aiofiles>=23.2.0
+sqlalchemy[asyncio]>=2.0.0
+# 可选数据库驱动（按需取消注释）
+# aiomysql>=0.2.0       # MySQL
+# asyncpg>=0.29.0       # PostgreSQL
+# aiosqlite>=0.20.0     # SQLite
