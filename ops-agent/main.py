@@ -64,11 +64,28 @@ async def main() -> None:
 
     # ── 初始化核心组件 ────────────────────────────────────
     from core.event_bus import EventBus
+    from core.llm_agent_client import LLMAgentClient
+    from core.unmatched_tracker import UnmatchedTracker
     from storage.alert_store import AlertStore
 
     bus = EventBus()
     store = AlertStore(data_dir=data_dir, retention_days=retention_days)
     await store.initialize()
+
+    # ── 初始化外部 LLM Agent 客户端 ─────────────────────
+    # 本项目不直接调用任何 LLM。AI 能力通过 RESTful 请求发给外部 LLM Agent。
+    llm_cfg = config.get("llm_agent", {})
+    llm_client = LLMAgentClient(
+        base_url=llm_cfg.get("base_url", ""),
+        enabled=llm_cfg.get("enabled", False),
+        timeout_seconds=llm_cfg.get("timeout_seconds", 30),
+        api_key=llm_cfg.get("api_key", ""),
+        api_key_header=llm_cfg.get("api_key_header", "X-API-Key"),
+        retry_attempts=llm_cfg.get("retry_attempts", 2),
+    )
+
+    # ── UnmatchedTracker：记录未命中规则的异常行 ────────
+    unmatched_tracker = UnmatchedTracker()
 
     # ── 初始化 Agents ──────────────────────────────────────
     from agents.log_agent import LogAgent
@@ -89,6 +106,7 @@ async def main() -> None:
         store=store,
         rules=rules,
         correlation_window_seconds=orch_cfg.get("correlation_window_seconds", 300),
+        llm_client=llm_client,
     )
 
     log_agent = LogAgent(
@@ -96,6 +114,7 @@ async def main() -> None:
         targets=log_cfg.get("targets", []),
         rules=rules,
         poll_interval=log_cfg.get("poll_interval_seconds", 2),
+        unmatched_tracker=unmatched_tracker,
     )
 
     db_agent = DBAgent(
@@ -125,6 +144,8 @@ async def main() -> None:
         min_fires=evo_cfg.get("min_fires_for_review", 10),
         on_rules_updated=on_rules_updated if evo_cfg.get("enabled", True) else None,
         learning_dir=str(Path(data_dir) / "learning"),
+        llm_client=llm_client,
+        unmatched_tracker=unmatched_tracker,
     )
 
     # ── 创建 FastAPI 应用 ────────────────────────────────

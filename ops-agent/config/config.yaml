@@ -61,6 +61,25 @@ self_evolution_agent:
   false_positive_threshold: 0.3    # 误报率超过 30% 则降低规则权重
   min_fires_for_review: 10         # 规则触发次数达到此阈值才参与评估
 
+# ── 外部 LLM Agent 连接配置 ───────────────────────────────
+# 本项目所有 Agent 均不直接调用 LLM。
+# AI 能力（告警诊断、规则进化建议）通过 RESTful 请求发送到此处配置的外部 LLM Agent。
+# LLM Agent 由另一个平台编排生成，与本项目解耦。
+#
+# 当 enabled=false 或 base_url 为空时，各 Agent 自动降级为纯统计/规则逻辑，
+# 不影响系统正常运行。
+#
+# 外部 LLM Agent 需实现以下接口（详见 core/llm_agent_client.py 中的契约文档）：
+#   POST /analyze-alert   ← 告警 AI 诊断
+#   POST /evolve-rules    ← 规则进化建议（含新规则发现）
+llm_agent:
+  enabled: false
+  base_url: ""                     # 示例：http://llm-agent.internal:9000
+  timeout_seconds: 30
+  api_key: ""                      # 可选：鉴权 Key
+  api_key_header: "X-API-Key"      # 可选：鉴权 Header 名称
+  retry_attempts: 2                # 超时/失败后的重试次数
+
 # ── API 服务器 ────────────────────────────────────────────
 api_server:
   host: 0.0.0.0

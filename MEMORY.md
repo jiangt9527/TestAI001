@@ -35,15 +35,23 @@
 - Milestone 3：执行层（ActionAgent：受控运维操作 + 审计日志）
 - Milestone 4：接口层（REST API + Webhook + Prometheus Metrics，供 Grafana/Zabbix 接入）
 
-**当前进度**：✅ Milestone 1 完成！代码已实现并通过集成测试。
+**当前进度**：✅ Milestone 1 + 架构改造完成。
+
+**核心架构约束**：
+- 本项目所有 Agent 不直接调用 LLM
+- AI 能力（告警诊断、规则进化）通过 REST 调用外部 LLM Agent
+- LLM Agent 由另一平台编排，本项目只调用其 RESTful 接口
+- LLM Agent 不可用时自动降级为纯统计逻辑
+
+**LLM Agent REST 接口契约**（外部 LLM Agent 需实现）：
+- `POST /analyze-alert` → 告警 AI 诊断（分析 + 建议）
+- `POST /evolve-rules`  → 规则进化建议（权重调整 + 新规则发现）
 
 **项目目录**：`ops-agent/`
 
-**技术选型**：Python 3.11+、FastAPI、SQLAlchemy、asyncio、Docker Compose
+**技术选型**：Python 3.11+、FastAPI、asyncio、aiohttp、PyYAML、Docker Compose
 
-**已实现组件**：LogAgent、DBAgent、APIProbeAgent、OrchestratorAgent、SelfEvolutionAgent、AlertStore、FastAPI REST + /metrics（Prometheus）、Docker Compose
-
-**下一步**：Milestone 2（LLM 诊断增强）或 Milestone 3（ActionAgent 受控执行）
+**下一步**：Milestone 3（ActionAgent 受控执行）或 Milestone 4（Webhook 推送）
 
 ---
 

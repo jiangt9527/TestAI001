@@ -3,6 +3,9 @@ agents/log_agent.py — 日志文件监控 Agent
 
 持续 tail 日志文件，将每行与规则匹配，匹配成功则发布 Event 到事件总线。
 支持文件轮转（logrotate）检测，自动重新打开文件。
+
+未命中任何规则但看起来像异常的行，会记录到 UnmatchedTracker，
+供 SelfEvolutionAgent 在进化周期中发送给外部 LLM Agent 进行新规则发现。
 """
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ from typing import Optional
 
 from core.event import Event, EventSource, EventSeverity
 from core.event_bus import EventBus
+from core.unmatched_tracker import UnmatchedTracker
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +46,7 @@ class LogAgent:
         targets: list[dict],
         rules: list[dict],
         poll_interval: float = 2.0,
+        unmatched_tracker: Optional[UnmatchedTracker] = None,
     ) -> None:
         self._bus = bus
         self._targets = [LogTarget(**t) for t in targets]
@@ -49,6 +54,7 @@ class LogAgent:
         self._poll_interval = poll_interval
         self._file_positions: dict[str, int] = {}
         self._file_inodes: dict[str, int] = {}
+        self._unmatched_tracker = unmatched_tracker
 
     def _compile_rules(self, raw_rules: list[dict]) -> list[LogRule]:
         compiled = []
@@ -125,8 +131,10 @@ class LogAgent:
             logger.warning("LogAgent: cannot read %s: %s", target.path, exc)
 
     async def _match_and_publish(self, line: str, target: LogTarget) -> None:
+        matched = False
         for rule in self._rules:
             if rule.pattern.search(line):
+                matched = True
                 title = rule.title_template.replace("{target}", target.name)
                 event = Event(
                     source=EventSource.LOG,
@@ -144,3 +152,8 @@ class LogAgent:
                     target.name,
                     line,
                 )
+
+        # 未命中任何规则的可疑行记录到 UnmatchedTracker，
+        # 供 SelfEvolutionAgent 发送给外部 LLM Agent 进行新规则发现
+        if not matched and self._unmatched_tracker:
+            await self._unmatched_tracker.record(line, target.path)

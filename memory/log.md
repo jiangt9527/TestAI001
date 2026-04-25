@@ -30,3 +30,18 @@
 - 集成测试通过：日志写入 → 事件总线 → 告警生成 全流程验证 OK
 - Docker Compose 一键部署配置完成
 - 遗留问题：下次会话可选择推进 Milestone 2（LLM 诊断）或 Milestone 3（ActionAgent 受控执行）
+
+---
+
+## 2026-04-25（第四次会话）
+
+- 新需求：本项目 Agent 不能直接调用 LLM，所有 AI 能力通过 REST 调用外部 LLM Agent
+- 新增 core/llm_agent_client.py：封装对外部 LLM Agent 的所有 HTTP 调用，含契约文档
+- 新增 core/unmatched_tracker.py：记录未命中规则的可疑日志行，供 LLM Agent 发现新规则
+- 改造 OrchestratorAgent：告警生成后异步调用外部 LLM Agent /analyze-alert 做 AI 诊断
+- 改造 SelfEvolutionAgent：双通道进化（统计+LLM Agent），从外部获取新规则建议
+- 改造 LogAgent：接入 UnmatchedTracker，记录未匹配可疑行
+- 更新 config.yaml：新增 llm_agent 配置段
+- 更新 README.md：重写架构图，清晰说明 LLM 解耦设计
+- 集成测试通过（含降级路径验证）
+- 遗留问题：下次可推进 Milestone 3（ActionAgent）或 Milestone 4（Webhook）
